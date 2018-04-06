@@ -10,7 +10,7 @@ import { ElementsSet } from './elements';
 
 @Injectable()
 export class FileService {
-    private fileUrl = 'http://localhost:4200/outputFile.json';
+    private fileUrl = '/api/outputFile.json';
     constructor(private http: Http) { }
 
     getElements(): Promise<ElementsSet> {
