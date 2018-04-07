@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FileService } from '../elements.service';
-import { Line, Pin, NHeader, ElementsSet } from '../elements';
-import { POINT_CONVERSION_COMPRESSED } from 'constants';
+import { Line, Pin, Arc, Symbol, ElementsSet } from '../elements';
 
 @Component({
   selector: 'app-preview',
@@ -20,15 +19,14 @@ export class PreviewComponent implements OnInit {
   getElements() {
     this.fileService.getElements().then(elements => {
       this.elements = elements;
-      console.log(this.elements);
-      this.draw(this.elements);
+      this.draw();
     });
   }
 
-  draw(elements: ElementsSet) {
+  draw() {
     this.container = document.getElementById('container');
-    this.cw = 1000;
-    this.ch = 1000;
+    this.cw = 1500;
+    this.ch = 1500;
     this.canvas = document.createElement('canvas');
     this.ctx = <CanvasRenderingContext2D>this.canvas.getContext('2d');
     this.canvas.width = this.cw;
@@ -36,123 +34,149 @@ export class PreviewComponent implements OnInit {
     this.container.appendChild(this.canvas);
 
     this.ctx.transform(1, 0, 0, -1, 0, 1200);
-    this.drawLines();
-    this.drawNHeaders();
-  }
-
-  drawLines() {
-    let element: any;
-    for (let i in this.elements.lines) {
-      element = this.elements.lines[i];
-      let startX = element.startX / 8;
-      let startY = element.startY / 8;
-      let endX = element.endX / 8;
-      let endY = element.endY / 8;
-
-      this.ctx.save();
-      this.ctx.beginPath();
-      this.ctx.moveTo(startX, startY);
-      this.ctx.lineTo(endX, endY);
-      this.ctx.stroke();
+    this.ctx.scale(0.125, 0.125);
+    this.ctx.lineWidth = 10;
+    for (let i in this.elements.linesMsg.lines) {
+      let line: Line = this.elements.linesMsg.lines[i];
+      this.drawLine(line);
+    }
+    for (let i in this.elements.symbolsMsg.symbols) {
+      let symbol: Symbol = this.elements.symbolsMsg.symbols[i];
+      this.drawSymbol(symbol);
     }
   }
 
-  drawNHeaders() {
-    for (let i in this.elements.nHeaders) {
-      let nHeader: NHeader;
-      let headerX, headerY: number;
-      nHeader = this.elements.nHeaders[i];
-      headerX = nHeader.headerX / 8;
-      headerY = nHeader.headerY / 8;
-      this.ctx.save();
-      this.ctx.translate(headerX, headerY);
-      this.ctx.rotate(nHeader.headerRotation * Math.PI / 180);
-      this.ctx.beginPath();
-      for (let j in nHeader.lines) {
-        let startX = nHeader.lines[j].startX / 8;
-        let startY = nHeader.lines[j].startY / 8;
-        let endX = nHeader.lines[j].endX / 8;
-        let endY = nHeader.lines[j].endY / 8;
-        this.ctx.moveTo(startX, startY);
-        this.ctx.lineTo(endX, endY);
-        this.ctx.stroke();
-      }
-      this.ctx.restore();
-      for (let j in nHeader.pins) {
-        let pin = nHeader.pins[j];
-        let oX, oY, startX, startY, endX, endY, pinNumX, pinNumY: number;
-        if (pin.rotation == 0) {
-          oX = (pin.footX + pin.outsideRadius) / 8;
-          oY = pin.footY / 8;
-          startX = oX + pin.outsideRadius / 8;
-          startY = oY;
-          endX = startX + pin.length / 8;
-          endY = startY;
-          pinNumX = pin.pinNum.pinNumX / 8 - 15;
-          pinNumY = pin.pinNum.pinNumY / 8;
-        }
-        else if (pin.rotation == 90) {
-          oX = pin.footX / 8;
-          oY = (pin.footY + pin.outsideRadius) / 8;
-          startX = oX;
-          startY = oY + pin.outsideRadius / 8;
-          endX = startX;
-          endY = startY + pin.length / 8;
-          pinNumX = pin.pinNum.pinNumX / 8;
-          pinNumY = pin.pinNum.pinNumY / 8 - 15;
-        }
-        else if (pin.rotation == 180) {
-          oX = (pin.footX - pin.outsideRadius) / 8;
-          oY = pin.footY / 8;
-          startX = oX - pin.outsideRadius / 8;
-          startY = oY;
-          endX = startX - pin.length / 8;
-          endY = startY;
-          pinNumX = pin.pinNum.pinNumX / 8 + 15;
-          pinNumY = pin.pinNum.pinNumY / 8;
-        }
-        else {
-          oX = pin.footX / 8;
-          oY = (pin.footY - pin.outsideRadius) / 8;
-          startX = oX;
-          startY = oY - pin.outsideRadius / 8;
-          endX = startX;
-          endY = startY - pin.length / 8;
-          pinNumX = pin.pinNum.pinNumX / 8;
-          pinNumY = pin.pinNum.pinNumY / 8 + 15;
-        }
-        this.ctx.save();
-        this.ctx.translate(headerX, headerY);
-        this.ctx.rotate(nHeader.headerRotation * Math.PI / 180);
-        this.ctx.beginPath();
-        this.ctx.moveTo(startX, startY);
-        this.ctx.lineTo(endX, endY);
-        this.ctx.stroke();
+  drawLine(line: Line) {
+    let startX = line.startX;
+    let startY = line.startY;
+    let endX = line.endX;
+    let endY = line.endY;
 
-        this.ctx.beginPath();
-        this.ctx.arc(oX, oY, pin.outsideRadius / 8, 0, Math.PI * 2);
-        this.ctx.closePath();
-        this.ctx.stroke();
+    this.ctx.beginPath();
+    this.ctx.moveTo(startX, startY);
+    this.ctx.lineTo(endX, endY);
+    this.ctx.stroke();
+    this.ctx.closePath();
+  }
 
-        this.ctx.transform(1, 0, 0, -1, 0, pinNumY * 2);
-        this.ctx.fillText(pin.pinNum.pinNum, pinNumX, pinNumY);
-        this.ctx.restore();
-      }
-
-      this.ctx.save();
-      this.ctx.translate(headerX, headerY);
-      this.ctx.rotate(nHeader.headerRotation * Math.PI / 180);
-      this.ctx.transform(1, 0, 0, -1, 0, nHeader.name.nameY / 8 * 2);
-      this.ctx.fillText(nHeader.name.name, nHeader.name.nameX / 8, nHeader.name.nameY / 8);
-      this.ctx.restore();
-
-      this.ctx.save();
-      this.ctx.translate(headerX, headerY);
-      this.ctx.rotate(nHeader.headerRotation * Math.PI / 180);
-      this.ctx.transform(1, 0, 0, -1, 0, nHeader.refDes.refDesY / 8 * 2);
-      this.ctx.fillText("JP?", nHeader.refDes.refDesX / 8, nHeader.refDes.refDesY / 8);
-      this.ctx.restore();
+  drawPin(pin: Pin) {
+    let oX, oY, radius, startX, startY, endX, endY, nameX, nameY: number;
+    let name: string;
+    if (pin.outsideEdge == "Dot") {
+      radius = 25;
+      name = pin.nameMsg.name;
     }
+    else if (pin.outsideEdge == "") {
+      radius = 0;
+      name = "";
+    }
+    if (pin.rotation == 0) {
+      oX = pin.footSite.siteX + radius;
+      oY = pin.footSite.siteY;
+      startX = oX + radius;
+      startY = oY;
+      endX = startX + pin.length;
+      endY = startY;
+      nameX = pin.nameMsg.nameX - 100;
+      nameY = pin.nameMsg.nameY;
+    }
+    else if (pin.rotation == 90) {
+      oX = pin.footSite.siteX;
+      oY = pin.footSite.siteY + radius;
+      startX = oX;
+      startY = oY + radius;
+      endX = startX;
+      endY = startY + pin.length;
+      nameX = pin.nameMsg.nameX;
+      nameY = pin.nameMsg.nameY - 100;
+    }
+    else if (pin.rotation == 180) {
+      oX = (pin.footSite.siteX - radius);
+      oY = pin.footSite.siteY;
+      startX = oX - radius;
+      startY = oY;
+      endX = startX - pin.length;
+      endY = startY;
+      nameX = pin.nameMsg.nameX + 100;
+      nameY = pin.nameMsg.nameY;
+    }
+    else {
+      oX = pin.footSite.siteX;
+      oY = pin.footSite.siteY - radius;
+      startX = oX;
+      startY = oY - radius;
+      endX = startX;
+      endY = startY - pin.length;
+      nameX = pin.nameMsg.nameX;
+      nameY = pin.nameMsg.nameY + 100;
+    }
+    this.ctx.beginPath();
+    this.ctx.moveTo(startX, startY);
+    this.ctx.lineTo(endX, endY);
+    this.ctx.stroke();
+    this.ctx.closePath();
+
+    this.ctx.beginPath();
+    this.ctx.arc(oX, oY, radius, 0, Math.PI * 2);
+    this.ctx.closePath();
+    this.ctx.stroke();
+
+    this.ctx.save();
+    this.ctx.transform(1, 0, 0, -1, 0, nameY * 2);
+    this.ctx.font = "70px Bangla Sangam MN";
+    this.ctx.fillText(name, nameX, nameY);
+    this.ctx.restore();
+  }
+
+  drawArc(arc: Arc) {
+    let oX = arc.oX;
+    let oY = arc.oY;
+    let radius = arc.radius;
+    let width = arc.width;
+    let startAngle = arc.startAngle * Math.PI / 180;
+    let endAngle: number;
+    if (arc.sweepAngle == 0) {
+      endAngle = 360 * Math.PI / 180;
+    }
+    else {
+      endAngle = startAngle + arc.sweepAngle * Math.PI / 180;
+    }
+    this.ctx.lineWidth = width;
+    this.ctx.beginPath();
+    this.ctx.arc(oX, oY, radius, startAngle, endAngle);
+    this.ctx.stroke();
+    this.ctx.closePath();
+  }
+
+  drawSymbol(symbol: Symbol) {
+    let siteX: number;
+    let siteY: number;
+    siteX = symbol.site.siteX;
+    siteY = symbol.site.siteY;
+
+    this.ctx.save();
+    this.ctx.translate(siteX, siteY);
+    this.ctx.rotate(symbol.rotation * Math.PI / 180);
+
+    for (let i in symbol.lines) {
+      this.drawLine(symbol.lines[i]);
+    }
+    for (let i in symbol.pins) {
+      this.drawPin(symbol.pins[i]);
+    }
+    for (let i in symbol.arcs) {
+      this.drawArc(symbol.arcs[i]);
+    }
+    let name = symbol.nameMsg.name;
+    let nameX = symbol.nameMsg.nameX;
+    let nameY = symbol.nameMsg.nameY;
+    this.ctx.save()
+    this.ctx.transform(1, 0, 0, -1, 0, nameY * 2);
+    this.ctx.font = "70px Bangla Sangam MN";
+    this.ctx.fillText(symbol.nameMsg.name, symbol.nameMsg.nameX, symbol.nameMsg.nameY);
+    this.ctx.fillText(symbol.refDesMsg.refDes, symbol.refDesMsg.refDesX, symbol.refDesMsg.refDesY);
+    this.ctx.restore();
+    this.ctx.restore();
   }
 
   ngOnInit() {
