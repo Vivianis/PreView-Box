@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FileService } from '../elements.service';
-import { Line, Pin, Arc, Symbol, ElementsSet } from '../elements';
+import { Line, Pin, Arc, Text, Symbol, ElementsSet } from '../elements';
 
 @Component({
   selector: 'app-preview',
@@ -35,7 +35,8 @@ export class PreviewComponent implements OnInit {
 
     this.ctx.transform(1, 0, 0, -1, 0, 1200);
     this.ctx.scale(0.125, 0.125);
-    this.ctx.lineWidth = 10;
+    this.ctx.lineWidth = 12;
+    this.ctx.strokeStyle = "rgb(15,32,220)";
     for (let i in this.elements.linesMsg.lines) {
       let line: Line = this.elements.linesMsg.lines[i];
       this.drawLine(line);
@@ -56,19 +57,25 @@ export class PreviewComponent implements OnInit {
     this.ctx.moveTo(startX, startY);
     this.ctx.lineTo(endX, endY);
     this.ctx.stroke();
-    this.ctx.closePath();
+  }
+
+  drawText(text: Text) {
+    this.ctx.save();
+    this.ctx.transform(1, 0, 0, -1, 0, text.site.siteY * 2);
+    this.ctx.font = "80px Bangla Sangam MN";
+    this.ctx.fillText(text.content, text.site.siteX, text.site.siteY);
+    this.ctx.restore();
   }
 
   drawPin(pin: Pin) {
-    let oX, oY, radius, startX, startY, endX, endY, nameX, nameY: number;
-    let name: string;
+    let oX, oY, radius, startX, startY, endX, endY, desX, desY, nameX, nameY: number;
+    let des = pin.desMsg.des;
+    let name = pin.nameMsg.name;
     if (pin.outsideEdge == "Dot") {
       radius = 25;
-      name = pin.nameMsg.name;
     }
     else if (pin.outsideEdge == "") {
       radius = 0;
-      name = "";
     }
     if (pin.rotation == 0) {
       oX = pin.footSite.siteX + radius;
@@ -77,8 +84,10 @@ export class PreviewComponent implements OnInit {
       startY = oY;
       endX = startX + pin.length;
       endY = startY;
-      nameX = pin.nameMsg.nameX - 100;
-      nameY = pin.nameMsg.nameY;
+      desX = endX + 100;
+      desY = endY;
+      nameX = oX - 100;
+      nameY = oY;
     }
     else if (pin.rotation == 90) {
       oX = pin.footSite.siteX;
@@ -87,8 +96,10 @@ export class PreviewComponent implements OnInit {
       startY = oY + radius;
       endX = startX;
       endY = startY + pin.length;
-      nameX = pin.nameMsg.nameX;
-      nameY = pin.nameMsg.nameY - 100;
+      desX = endX;
+      desY = endY + 100;
+      nameX = oX;
+      nameY = oY - 100;
     }
     else if (pin.rotation == 180) {
       oX = (pin.footSite.siteX - radius);
@@ -97,8 +108,10 @@ export class PreviewComponent implements OnInit {
       startY = oY;
       endX = startX - pin.length;
       endY = startY;
-      nameX = pin.nameMsg.nameX + 100;
-      nameY = pin.nameMsg.nameY;
+      desX = endX - 100;
+      desY = endY;
+      nameX = oX + 100;
+      nameY = oY;
     }
     else {
       oX = pin.footSite.siteX;
@@ -107,9 +120,13 @@ export class PreviewComponent implements OnInit {
       startY = oY - radius;
       endX = startX;
       endY = startY - pin.length;
-      nameX = pin.nameMsg.nameX;
-      nameY = pin.nameMsg.nameY + 100;
+      desX = endX;
+      desY = endY - 100;
+      nameX = oX;
+      nameY = oY + 100;
     }
+    this.ctx.save();
+    this.ctx.strokeStyle = "black";
     this.ctx.beginPath();
     this.ctx.moveTo(startX, startY);
     this.ctx.lineTo(endX, endY);
@@ -120,12 +137,23 @@ export class PreviewComponent implements OnInit {
     this.ctx.arc(oX, oY, radius, 0, Math.PI * 2);
     this.ctx.closePath();
     this.ctx.stroke();
-
-    this.ctx.save();
-    this.ctx.transform(1, 0, 0, -1, 0, nameY * 2);
-    this.ctx.font = "70px Bangla Sangam MN";
-    this.ctx.fillText(name, nameX, nameY);
     this.ctx.restore();
+
+    if (pin.desMsg.desDisplay) {
+      this.ctx.save();
+      this.ctx.transform(1, 0, 0, -1, 0, desY * 2);
+      this.ctx.font = "80px Bangla Sangam MN";
+      this.ctx.fillText(des, desX, desY);
+      this.ctx.restore();
+    }
+    if (pin.nameMsg.nameDisplay) {
+      this.ctx.save();
+      this.ctx.transform(1, 0, 0, -1, 0, nameY * 2);
+      this.ctx.font = "80px Bangla Sangam MN";
+      this.ctx.fillText(name, nameX, nameY);
+      this.ctx.restore();
+    }
+
   }
 
   drawArc(arc: Arc) {
@@ -158,8 +186,35 @@ export class PreviewComponent implements OnInit {
     this.ctx.translate(siteX, siteY);
     this.ctx.rotate(symbol.rotation * Math.PI / 180);
 
-    for (let i in symbol.lines) {
-      this.drawLine(symbol.lines[i]);
+    if (symbol.nameMsg.name.search(/HEADER|CON|DPY/) != -1) {
+      //暴力解决非直连路径填充问题QAQ
+      this.ctx.save();
+      this.ctx.lineWidth = 30;
+      this.ctx.fillStyle = "rgb(255,254,181)";
+      this.ctx.strokeStyle = "rgb(223,35,23)";
+      this.ctx.beginPath();
+      this.ctx.moveTo(symbol.lines[0].startX, symbol.lines[0].startY);
+      this.ctx.lineTo(symbol.lines[0].endX, symbol.lines[0].endY);
+      this.ctx.lineTo(symbol.lines[2].endX, symbol.lines[2].endY);
+      this.ctx.lineTo(symbol.lines[3].endX, symbol.lines[3].endY);
+      this.ctx.lineTo(symbol.lines[0].startX, symbol.lines[0].startY);
+      this.ctx.stroke();
+      this.ctx.fill();
+      this.ctx.restore();
+
+      this.ctx.save();
+      this.ctx.strokeStyle = "black";
+      for (let i in symbol.lines) {
+        if (Number(i) > 3) {
+          this.drawLine(symbol.lines[i]);
+        }
+      }
+      this.ctx.restore();
+    }
+    else {
+      for (let i in symbol.lines) {
+        this.drawLine(symbol.lines[i]);
+      }
     }
     for (let i in symbol.pins) {
       this.drawPin(symbol.pins[i]);
@@ -167,12 +222,15 @@ export class PreviewComponent implements OnInit {
     for (let i in symbol.arcs) {
       this.drawArc(symbol.arcs[i]);
     }
+    for (let i in symbol.texts) {
+      this.drawText(symbol.texts[i]);
+    }
     let name = symbol.nameMsg.name;
     let nameX = symbol.nameMsg.nameX;
     let nameY = symbol.nameMsg.nameY;
     this.ctx.save()
     this.ctx.transform(1, 0, 0, -1, 0, nameY * 2);
-    this.ctx.font = "70px Bangla Sangam MN";
+    this.ctx.font = "80px Bangla Sangam MN";
     this.ctx.fillText(symbol.nameMsg.name, symbol.nameMsg.nameX, symbol.nameMsg.nameY);
     this.ctx.fillText(symbol.refDesMsg.refDes, symbol.refDesMsg.refDesX, symbol.refDesMsg.refDesY);
     this.ctx.restore();

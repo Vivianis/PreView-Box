@@ -10,7 +10,14 @@ export class Pin {
         name: string;
         nameX: number;
         nameY: number;
+        nameDisplay: boolean;
     };
+    desMsg: {
+        des: string;
+        desX: number;
+        desY: number;
+        desDisplay: boolean;
+    }
     outsideEdge: string;
     footSite: {
         siteX: number;
@@ -29,6 +36,14 @@ export class Arc {
     width: number;
 }
 
+export class Text {
+    site: {
+        siteX: number;
+        siteY: number;
+    };
+    content: string;
+    rotation: number;
+}
 export class Symbol {
     nameMsg: {
         name: string;
@@ -48,6 +63,7 @@ export class Symbol {
     lines: Line[];
     pins: Pin[];
     arcs: Arc[];
+    texts: Text[];
 }
 export class ElementsSet {
     linesMsg: {
