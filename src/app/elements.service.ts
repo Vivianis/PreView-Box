@@ -6,15 +6,14 @@ import 'rxjs/add/operator/catch';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/toPromise';
 
-import { ElementsSet } from './elements';
+import { ElementsSet } from './preview/elements';
 
 @Injectable()
 export class FileService {
-    private fileUrl = '/api/outputFile.json';
     constructor(private http: Http) { }
 
-    getElements(): Promise<ElementsSet> {
-        return this.http.get(this.fileUrl)
+    getElements(fileName): Promise<ElementsSet> {
+        return this.http.get(`/api/${fileName}`)
             .toPromise()
             .then(response => response.json() as ElementsSet)
             .catch(this.handleError);

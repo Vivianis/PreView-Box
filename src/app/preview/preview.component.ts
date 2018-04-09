@@ -1,13 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnChanges, SimpleChanges, Input } from '@angular/core';
 import { FileService } from '../elements.service';
-import { Line, Pin, Arc, Text, Symbol, ElementsSet } from '../elements';
+import { Line, Pin, Arc, Text, Symbol, ElementsSet } from './elements';
 
 @Component({
   selector: 'app-preview',
   templateUrl: './preview.component.html',
   styleUrls: ['./preview.component.css']
 })
-export class PreviewComponent implements OnInit {
+export class PreviewComponent implements OnChanges {
+  @Input() file: string = '';
   elements: ElementsSet;
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
@@ -17,26 +18,39 @@ export class PreviewComponent implements OnInit {
   constructor(private fileService: FileService) { }
 
   getElements() {
-    this.fileService.getElements().then(elements => {
+    this.fileService.getElements(this.file).then(elements => {
       this.elements = elements;
       this.draw();
     });
   }
 
-  draw() {
+  ngOnInit() {
     this.container = document.getElementById('container');
-    this.cw = 1500;
-    this.ch = 1500;
+    this.cw = 1600;
+    this.ch = 1000;
     this.canvas = document.createElement('canvas');
     this.ctx = <CanvasRenderingContext2D>this.canvas.getContext('2d');
     this.canvas.width = this.cw;
     this.canvas.height = this.ch;
     this.container.appendChild(this.canvas);
 
-    this.ctx.transform(1, 0, 0, -1, 0, 1200);
-    this.ctx.scale(0.125, 0.125);
+    this.ctx.transform(1, 0, 0, -1, 0, 900);
+    this.ctx.scale(0.1, 0.1);
     this.ctx.lineWidth = 12;
     this.ctx.strokeStyle = "rgb(15,32,220)";
+  }
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['file'].previousValue != changes['file'].currentValue) {
+      this.getElements();
+    }
+  }
+
+  draw() {
+    this.ctx.save();
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.restore();
+
     for (let i in this.elements.linesMsg.lines) {
       let line: Line = this.elements.linesMsg.lines[i];
       this.drawLine(line);
@@ -186,7 +200,7 @@ export class PreviewComponent implements OnInit {
     this.ctx.translate(siteX, siteY);
     this.ctx.rotate(symbol.rotation * Math.PI / 180);
 
-    if (symbol.nameMsg.name.search(/HEADER|CON|DPY/) != -1) {
+    if (symbol.nameMsg.name.search(/HEADER|CON\d|CON |DPY|PIN|BRIDGE2|EDGE|PC|VOLTREG/) != -1) {
       //暴力解决非直连路径填充问题QAQ
       this.ctx.save();
       this.ctx.lineWidth = 30;
@@ -235,10 +249,6 @@ export class PreviewComponent implements OnInit {
     this.ctx.fillText(symbol.refDesMsg.refDes, symbol.refDesMsg.refDesX, symbol.refDesMsg.refDesY);
     this.ctx.restore();
     this.ctx.restore();
-  }
-
-  ngOnInit() {
-    this.getElements();
   }
 
 }

@@ -1,0 +1,9 @@
+<div>
+  <h2>File List</h2>
+  <ul class="files">
+    <li *ngFor="let file of files" (click)="onSelect(file)">
+      <span class="badge">{{file}}</span>
+    </li>
+  </ul>
+  <app-preview [file]="selectedFile"></app-preview>
+</div>
